@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: s8-fd-api-server
+  namespace: s8fd
+spec:
+  selector:
+    app: s8-fd-server
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 3000
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s8-fd-server
+  namespace: s8fd
+  labels:
+    app: s8-fd-server
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: s8-fd-server
+  template:
+    metadata:
+      labels:
+        app: s8-fd-server
+    spec:
+      containers:
+        - name: s8-fd-server
+          image: ledaihoan/s8-fd-server:0.0.1
+          env:
+            - name: NODE_ENV
+              value: "development"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+          imagePullPolicy: Always
+      imagePullSecrets:
+        - name: s8-fd-docker-registry
+      serviceAccountName: default
